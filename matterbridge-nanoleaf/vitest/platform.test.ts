@@ -148,11 +148,36 @@ describe('Nanoleaf platform', () => {
     expect(mocks.ltpduDevices[0]?.setColorTemperature).toHaveBeenCalledWith(2564);
 
     await platform.onConfigure();
-    expect(mocks.ltpduDevices[0]?.state).toHaveBeenCalledTimes(2);
+    expect(mocks.ltpduDevices[0]?.state).toHaveBeenCalledTimes(4);
     expect(mocks.wifiDevices[0]?.state).toHaveBeenCalledTimes(2);
     await platform.onShutdown();
     expect(mocks.ltpduDevices[0]?.close).toHaveBeenCalledOnce();
     expect(mocks.wifiDevices[0]?.close).toHaveBeenCalledOnce();
+  });
+
+  it('does not send a color-temperature command while the Nanoleaf is off', async () => {
+    const config: PlatformConfig = {
+      name: 'off-temperature',
+      type: 'AccessoryPlatform',
+      version: '0.1.0',
+      debug: false,
+      unregisterOnShutdown: true,
+      devices: [{ protocol: 'wifi-openapi', host: '192.168.1.20', deviceName: 'Panels' }],
+    };
+    const platform = new NanoleafPlatform(matterbridge, log, config);
+    addMatterbridge(platform);
+    await platform.onStart();
+
+    const device = mocks.wifiDevices[0];
+    device?.state.mockResolvedValue({ on: false, brightness: 72, hue: 180, saturation: 55, cct: 2700 });
+    await platform.lights[0]?.executeCommandHandler('moveToColorTemperature', { colorTemperatureMireds: 370 } as never, 'colorControl', {} as never, platform.lights[0]);
+    expect(device?.setColorTemperature).not.toHaveBeenCalled();
+
+    device?.state.mockResolvedValue({ on: true, brightness: 72, hue: 180, saturation: 55, cct: 2700 });
+    await platform.lights[0]?.executeCommandHandler('moveToColorTemperature', { colorTemperatureMireds: 370 } as never, 'colorControl', {} as never, platform.lights[0]);
+    expect(device?.setColorTemperature).toHaveBeenCalledWith(2703);
+
+    await platform.onShutdown();
   });
 
   it('prefers a discovered Thread device and continues when another configured device is offline', async () => {

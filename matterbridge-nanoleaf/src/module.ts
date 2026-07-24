@@ -244,7 +244,7 @@ export class NanoleafPlatform extends MatterbridgeAccessoryPlatform {
     light.addCommandHandler('moveToLevelWithOnOff', async ({ request: { level } }) => device.setBrightness(scale(level, 254, 100)));
     light.addCommandHandler('moveToHueAndSaturation', async ({ request: { hue, saturation } }) => device.setHueAndSaturation(scale(hue, 254, 360), scale(saturation, 254, 100)));
     light.addCommandHandler('moveToColorTemperature', async ({ request: { colorTemperatureMireds } }) =>
-      device.setColorTemperature(Math.round(1_000_000 / colorTemperatureMireds)),
+      this.setColorTemperatureIfOn(device, Math.round(1_000_000 / colorTemperatureMireds)),
     );
     light.addCommandHandler(
       'stepColorTemperature',
@@ -255,9 +255,18 @@ export class NanoleafPlatform extends MatterbridgeAccessoryPlatform {
         const minimum = colorTemperatureMinimumMireds || colorTempPhysicalMinMireds;
         const maximum = colorTemperatureMaximumMireds || colorTempPhysicalMaxMireds;
         const targetMireds = stepValue(colorTemperatureMireds, stepSize, stepMode, minimum, maximum, 1);
-        await device.setColorTemperature(Math.round(1_000_000 / targetMireds));
+        await this.setColorTemperatureIfOn(device, Math.round(1_000_000 / targetMireds));
       },
     );
+  }
+
+  private async setColorTemperatureIfOn(device: NanoleafLightDevice, cct: number): Promise<void> {
+    const state = await device.state();
+    if (!state.on) {
+      this.log.info('Nanoleaf color-temperature command skipped because the device is off:', device.host);
+      return;
+    }
+    await device.setColorTemperature(cct);
   }
 
   override async onConfigure(): Promise<void> {
