@@ -206,7 +206,8 @@ export class NanoleafPlatform extends MatterbridgeAccessoryPlatform {
           protocol,
           model: stringConfig(config, 'model'),
           deviceName: stringConfig(config, 'deviceName'),
-          token: stringConfig(config, 'token'),
+          // Matterbridge configs created by earlier plugin versions used openApiToken.
+          token: stringConfig(config, 'token') ?? stringConfig(config, 'openApiToken'),
           pin: pinConfig(config),
           configEntry: config,
         },
