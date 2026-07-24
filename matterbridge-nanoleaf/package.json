@@ -1,8 +1,8 @@
 {
   "name": "matterbridge-nanoleaf",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Matterbridge plugin for Nanoleaf Essentials LTPDU devices and Wi-Fi OpenAPI panels",
-  "author": "https://github.com/Luligu",
+  "author": "Codex , Andrew Nyman",
   "license": "Apache-2.0",
   "homepage": "https://github.com/Luligu/matterbridge-nanoleaf",
   "type": "module",

@@ -58,6 +58,15 @@ function stepValue(value: number, stepSize: number, stepMode: number, minimum: n
   return clamp(value + direction * stepSize, minimum, maximum);
 }
 
+const DEFAULT_COLOR_TEMPERATURE_MIREDS: readonly [number, number] = [154, 476];
+
+function colorTemperatureRange(state: NanoleafLightState): readonly [number, number] {
+  const minKelvin = state.colorTemperatureMinKelvin;
+  const maxKelvin = state.colorTemperatureMaxKelvin;
+  if (minKelvin && maxKelvin && minKelvin > 0 && maxKelvin > 0) return [Math.round(1_000_000 / maxKelvin), Math.round(1_000_000 / minKelvin)];
+  return DEFAULT_COLOR_TEMPERATURE_MIREDS;
+}
+
 function protocolConfig(config: PlatformConfig): NanoleafProtocol {
   return stringConfig(config, 'protocol') === 'wifi-openapi' ? 'wifi-openapi' : 'ltpdu';
 }
@@ -127,6 +136,7 @@ export class NanoleafPlatform extends MatterbridgeAccessoryPlatform {
       const state = await device.state();
       const info = await device.deviceInfo?.();
       const name = target.deviceName ?? target.model ?? (target.protocol === 'ltpdu' ? 'Nanoleaf Essentials' : 'Nanoleaf Wi-Fi Panel');
+      const [colorTemperatureMinMireds, colorTemperatureMaxMireds] = colorTemperatureRange(state);
       const light = new MatterbridgeEndpoint([extendedColorLight, powerSource], { id: `${name}-${target.host}` }, this.config.debug)
         .createDefaultIdentifyClusterServer()
         .createDefaultBasicInformationClusterServer(
@@ -143,7 +153,15 @@ export class NanoleafPlatform extends MatterbridgeAccessoryPlatform {
         )
         .createDefaultOnOffClusterServer(state.on)
         .createDefaultLevelControlClusterServer(scale(state.brightness, 100, 254), 1, 254)
-        .createDefaultColorControlClusterServer(0, 0, scale(state.hue, 360, 254), scale(state.saturation, 100, 254), state.cct > 0 ? Math.round(1_000_000 / state.cct) : 500)
+        .createDefaultColorControlClusterServer(
+          0,
+          0,
+          scale(state.hue, 360, 254),
+          scale(state.saturation, 100, 254),
+          state.cct > 0 ? Math.round(1_000_000 / state.cct) : 500,
+          colorTemperatureMinMireds,
+          colorTemperatureMaxMireds,
+        )
         .createDefaultPowerSourceWiredClusterServer()
         .addRequiredClusters();
       await this.registerDevice(light);

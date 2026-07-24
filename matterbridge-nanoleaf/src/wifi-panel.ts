@@ -6,7 +6,7 @@
 
 import type { NanoleafDeviceInfo, NanoleafLightDevice, NanoleafLightState } from './device.js';
 
-type ApiValue = { value?: unknown };
+type ApiValue = { value?: unknown; min?: unknown; max?: unknown };
 type ApiState = {
   on?: ApiValue;
   brightness?: ApiValue;
@@ -23,6 +23,10 @@ type ApiInfo = {
 
 function numberValue(value: ApiValue | undefined, fallback = 0): number {
   return typeof value?.value === 'number' && Number.isFinite(value.value) ? value.value : fallback;
+}
+
+function finiteNumber(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 }
 
 function booleanValue(value: ApiValue | undefined): boolean {
@@ -71,12 +75,15 @@ export class WiFiPanelDevice implements NanoleafLightDevice {
     const response = await this.request('GET', 'state');
     if (!isApiState(response)) throw new Error('Nanoleaf Wi-Fi state response was invalid');
     const state = response;
+    const minKelvin = finiteNumber(state.ct?.min);
+    const maxKelvin = finiteNumber(state.ct?.max);
     return {
       on: booleanValue(state.on),
       brightness: numberValue(state.brightness),
       hue: numberValue(state.hue),
       saturation: numberValue(state.sat),
       cct: numberValue(state.ct),
+      ...(minKelvin > 0 && maxKelvin > 0 ? { colorTemperatureMinKelvin: minKelvin, colorTemperatureMaxKelvin: maxKelvin } : {}),
     };
   }
 

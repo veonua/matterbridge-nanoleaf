@@ -10,6 +10,8 @@ export type NanoleafLightState = {
   hue: number;
   saturation: number;
   cct: number;
+  colorTemperatureMinKelvin?: number;
+  colorTemperatureMaxKelvin?: number;
 };
 
 export type NanoleafDeviceInfo = {
