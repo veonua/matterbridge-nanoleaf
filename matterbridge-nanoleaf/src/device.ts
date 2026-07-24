@@ -18,12 +18,13 @@ export type NanoleafDeviceInfo = {
   firmwareVersion?: string;
 };
 
+/** A Nanoleaf device announced through mDNS. */
 export type NanoleafDiscovery = {
   id: string;
   name: string;
   host: string;
   port: number;
-  protocol: 'wifi-openapi' | 'thread-ltpdu';
+  protocol: 'wifi-openapi' | 'ltpdu';
   model?: string;
   txt: Record<string, string>;
 };

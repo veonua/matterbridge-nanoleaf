@@ -22,8 +22,8 @@ const mocks = vi.hoisted(() => ({
   ltpduClients: [] as Array<{ pair: ReturnType<typeof vi.fn> }>,
   ltpduDevices: [] as MockDevice[],
   wifiDevices: [] as Array<MockDevice & { pair: ReturnType<typeof vi.fn> }>,
-  NL55Client: vi.fn(),
-  NL55Device: vi.fn(),
+  LtpduClient: vi.fn(),
+  LtpduDevice: vi.fn(),
   WiFiPanelDevice: vi.fn(),
 }));
 
@@ -43,8 +43,8 @@ function createMockDevice(): MockDevice {
 }
 
 vi.mock('../src/mdns-discovery.js', () => ({ discoverNanoleafMdns: mocks.discover }));
-vi.mock('../src/nl55.js', () => ({ NL55Client: mocks.NL55Client }));
-vi.mock('../src/nl55-device.js', () => ({ NL55Device: mocks.NL55Device }));
+vi.mock('../src/ltpdu.js', () => ({ LtpduClient: mocks.LtpduClient }));
+vi.mock('../src/ltpdu-device.js', () => ({ LtpduDevice: mocks.LtpduDevice }));
 vi.mock('../src/wifi-panel.js', () => ({ WiFiPanelDevice: mocks.WiFiPanelDevice }));
 
 import { NanoleafPlatform } from '../src/module.js';
@@ -62,15 +62,16 @@ describe('Nanoleaf platform', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.discover.mockResolvedValue([]);
     mocks.ltpduClients.length = 0;
     mocks.ltpduDevices.length = 0;
     mocks.wifiDevices.length = 0;
-    mocks.NL55Client.mockImplementation(function MockNL55Client() {
+    mocks.LtpduClient.mockImplementation(function MockLtpduClient() {
       const client = { pair: vi.fn().mockResolvedValue('ltpdu-token') };
       mocks.ltpduClients.push(client);
       return client;
     });
-    mocks.NL55Device.mockImplementation(function MockNL55Device(_client: unknown, host: string) {
+    mocks.LtpduDevice.mockImplementation(function MockLtpduDevice(_client: unknown, host: string) {
       const device = createMockDevice();
       if (host === 'offline.local') device.state.mockRejectedValueOnce(new Error('offline'));
       mocks.ltpduDevices.push(device);
@@ -89,7 +90,7 @@ describe('Nanoleaf platform', () => {
     vi.restoreAllMocks();
   });
 
-  it('starts NL55 and Wi-Fi devices, saves generated tokens, and routes Matter commands', async () => {
+  it('starts LTPDU and Wi-Fi devices, saves generated tokens, and routes Matter commands', async () => {
     const config: PlatformConfig = {
       name: 'matterbridge-nanoleaf',
       type: 'AccessoryPlatform',
@@ -97,7 +98,7 @@ describe('Nanoleaf platform', () => {
       debug: false,
       unregisterOnShutdown: true,
       devices: [
-        { protocol: 'nl55-ltpdu', host: 'strip.local', pin: '12345678', deviceName: 'Kitchen Strip' },
+        { protocol: 'ltpdu', host: 'strip.local', pin: '12345678', deviceName: 'Kitchen Strip' },
         { protocol: 'wifi-openapi', host: '192.168.1.20', deviceName: 'Living Room Panels' },
       ],
     };
@@ -110,7 +111,7 @@ describe('Nanoleaf platform', () => {
     expect(mocks.ltpduClients[0]?.pair).toHaveBeenCalledWith('12345678');
     expect(mocks.wifiDevices[0]?.pair).toHaveBeenCalledOnce();
     expect((config.devices as PlatformConfig[])[0]?.token).toBe('ltpdu-token');
-    expect((config.devices as PlatformConfig[])[1]?.openApiToken).toBe('wifi-token');
+    expect((config.devices as PlatformConfig[])[1]?.token).toBe('wifi-token');
 
     const ltpduLight = platform.lights[0];
     await ltpduLight?.executeCommandHandler('on', {}, 'onOff', {} as never, ltpduLight);
@@ -180,25 +181,7 @@ describe('Nanoleaf platform', () => {
     await platform.onShutdown();
   });
 
-  it('prefers a discovered Thread device and continues when another configured device is offline', async () => {
-    mocks.discover.mockResolvedValue([
-      { id: 'wifi-1', name: 'Panels', host: '192.168.1.20', port: 16021, protocol: 'wifi-openapi' },
-      { id: 'thread-1', name: 'Strip', host: 'fe80::1', port: 5683, protocol: 'thread-ltpdu' },
-    ]);
-    const discoveredConfig: PlatformConfig = {
-      name: 'discover',
-      type: 'AccessoryPlatform',
-      version: '0.1.0',
-      debug: false,
-      unregisterOnShutdown: true,
-      pin: '12345678',
-    };
-    const discovered = new NanoleafPlatform(matterbridge, log, discoveredConfig);
-    addMatterbridge(discovered);
-    await discovered.onStart();
-    expect(mocks.NL55Client).toHaveBeenCalledWith('fe80::1', 5683, '');
-    await discovered.onShutdown();
-
+  it('continues when a configured device is offline', async () => {
     const offlineConfig: PlatformConfig = {
       name: 'offline',
       type: 'AccessoryPlatform',
@@ -206,15 +189,37 @@ describe('Nanoleaf platform', () => {
       debug: false,
       unregisterOnShutdown: true,
       devices: [
-        { protocol: 'nl55-ltpdu', host: 'offline.local', token: '0123456789abcdef' },
-        { protocol: 'wifi-openapi', host: '192.168.1.20', openApiToken: 'wifi-token' },
+        { protocol: 'ltpdu', host: 'offline.local', token: '0123456789abcdef' },
+        { protocol: 'wifi-openapi', host: '192.168.1.20', token: 'wifi-token' },
       ],
     };
     const offline = new NanoleafPlatform(matterbridge, log, offlineConfig);
     addMatterbridge(offline);
     await offline.onStart();
     expect(offline.lights).toHaveLength(1);
+    expect(mocks.ltpduDevices[0]?.close).toHaveBeenCalledOnce();
     expect(mocks.wifiDevices[0]?.state).toHaveBeenCalledOnce();
+    expect(mocks.WiFiPanelDevice).toHaveBeenCalledWith('192.168.1.20', 16021, 'wifi-token');
     await offline.onShutdown();
+  });
+
+  it('lists discovered devices without attempting to pair them', async () => {
+    mocks.discover.mockResolvedValue([{ id: 'wifi-1', name: 'Panels', host: '192.168.1.20', port: 16021, protocol: 'wifi-openapi', txt: {} }]);
+    const config: PlatformConfig = {
+      name: 'discovery',
+      type: 'AccessoryPlatform',
+      version: '0.1.0',
+      debug: false,
+      unregisterOnShutdown: true,
+      devices: [{ protocol: 'ltpdu', host: 'strip.local', token: '0123456789abcdef' }],
+    };
+    const platform = new NanoleafPlatform(matterbridge, log, config);
+    addMatterbridge(platform);
+
+    await platform.onStart();
+
+    expect(mocks.discover).toHaveBeenCalledWith(1500, undefined);
+    expect(mocks.WiFiPanelDevice).not.toHaveBeenCalled();
+    await platform.onShutdown();
   });
 });

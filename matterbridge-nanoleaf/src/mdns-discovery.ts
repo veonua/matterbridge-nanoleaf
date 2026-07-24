@@ -10,7 +10,6 @@ import type { NanoleafDiscovery } from './device.js';
 
 const WIFI_SERVICE = '_nanoleafapi._tcp.local';
 const LTPDU_SERVICE = '_ltpdu._udp.local';
-const HAP_SERVICE = '_hap._udp.local';
 
 type MdnsRecord = NonNullable<MdnsMessage['answers']>[number];
 type MdnsResponse = { address: string; response: MdnsMessage };
@@ -72,11 +71,7 @@ function normalizeService(response: MdnsResponse, service: string, protocol: Nan
  * @returns {NanoleafDiscovery[]} Normalized Nanoleaf device records.
  */
 export function normalizeNanoleafMdns(responses: MdnsResponse[]): NanoleafDiscovery[] {
-  const found = responses.flatMap((response) => [
-    normalizeService(response, WIFI_SERVICE, 'wifi-openapi'),
-    normalizeService(response, LTPDU_SERVICE, 'thread-ltpdu'),
-    normalizeService(response, HAP_SERVICE, 'thread-ltpdu'),
-  ]);
+  const found = responses.flatMap((response) => [normalizeService(response, WIFI_SERVICE, 'wifi-openapi'), normalizeService(response, LTPDU_SERVICE, 'ltpdu')]);
   const unique = new Map<string, NanoleafDiscovery>();
   for (const device of found) {
     if (device) unique.set(`${device.protocol}:${device.id}`, device);
@@ -105,7 +100,6 @@ export async function discoverNanoleafMdns(timeoutMs = 1500, interfaceName?: str
       client.sendQuery([
         { name: WIFI_SERVICE, type: DnsRecordType.PTR, class: DnsClass.IN },
         { name: LTPDU_SERVICE, type: DnsRecordType.PTR, class: DnsClass.IN },
-        { name: HAP_SERVICE, type: DnsRecordType.PTR, class: DnsClass.IN },
       ]);
     });
     client.start();
@@ -115,4 +109,4 @@ export async function discoverNanoleafMdns(timeoutMs = 1500, interfaceName?: str
   return normalizeNanoleafMdns(responses);
 }
 
-export { DnsClass, HAP_SERVICE, LTPDU_SERVICE, WIFI_SERVICE };
+export { DnsClass, LTPDU_SERVICE, WIFI_SERVICE };

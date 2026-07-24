@@ -7,8 +7,8 @@ const TLV_ENDPOINT = 0x0001;
 const TLV_ARGUMENT = 0x0002;
 const TLV_RESULT = 0x0003;
 
-export type NL55State = { on: boolean; brightness: number; hue: number; saturation: number; cct: number };
-export type NL55DeviceInfo = { serialNumber: string; hardwareVersion: string; firmwareVersion: string };
+export type LtpduState = { on: boolean; brightness: number; hue: number; saturation: number; cct: number };
+export type LtpduDeviceInfo = { serialNumber: string; hardwareVersion: string; firmwareVersion: string };
 
 function cleanDeviceText(value: Buffer): string {
   return value.toString('ascii').replaceAll(String.fromCharCode(0), '').trim();
@@ -23,21 +23,21 @@ function tlv(tag: number, value: Uint8Array): Buffer {
 }
 
 function readTlv(data: Buffer, offset = 0): { tag: number; value: Buffer; next: number } {
-  if (offset + 4 > data.length) throw new Error('Short NL55 TLV');
+  if (offset + 4 > data.length) throw new Error('Short LTPDU TLV');
   const tag = data.readUInt16BE(offset);
   const length = data.readUInt16BE(offset + 2);
   const end = offset + 4 + length;
-  if (end > data.length) throw new Error('Truncated NL55 TLV');
+  if (end > data.length) throw new Error('Truncated LTPDU TLV');
   return { tag, value: data.subarray(offset + 4, end), next: end };
 }
 
-export function parseState(data: Buffer): NL55State {
-  const state: NL55State = { on: false, brightness: 0, hue: 0, saturation: 0, cct: 0 };
+export function parseState(data: Buffer): LtpduState {
+  const state: LtpduState = { on: false, brightness: 0, hue: 0, saturation: 0, cct: 0 };
   let offset = 0;
   while (offset < data.length) {
     const endpoint = readTlv(data, offset);
     const result = readTlv(data, endpoint.next);
-    if (result.tag !== TLV_RESULT || result.value.length < 2) throw new Error('Invalid NL55 state response');
+    if (result.tag !== TLV_RESULT || result.value.length < 2) throw new Error('Invalid LTPDU state response');
     const raw = result.value.subarray(1);
     const value = raw.readUIntBE(0, raw.length);
     switch (endpoint.value.toString('ascii')) {
@@ -68,7 +68,7 @@ function rawPublicKey(key: KeyObject): Buffer {
   return key.export({ format: 'der', type: 'spki' }).subarray(-32);
 }
 
-export class NL55Client {
+export class LtpduClient {
   private socket?: Socket;
   private cipher?: ReturnType<typeof createCipheriv>;
   private messageId = 1;
@@ -90,7 +90,7 @@ export class NL55Client {
     const header = Buffer.from([0x40, code, Math.floor(messageId / 256), messageId % 256]);
     const packet = Buffer.concat([header, ...pathOptions, payload.length ? Buffer.from([0xff]) : Buffer.alloc(0), payload]);
     return await new Promise((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error(`NL55 request timed out: ${path}`)), 5000);
+      const timer = setTimeout(() => reject(new Error(`LTPDU request timed out: ${path}`)), 5000);
       const onMessage = (response: Buffer): void => {
         clearTimeout(timer);
         this.socket?.off('message', onMessage);
@@ -115,7 +115,7 @@ export class NL55Client {
     const digest = (label: string): Buffer => createHash('sha1').update(label).update(shared).digest().subarray(0, 16);
     this.cipher = createCipheriv('aes-128-ctr', digest('AES-NL-OPENAPI-KEY'), digest('AES-NL-OPENAPI-IV'));
     const result = readTlv(this.cipher.update(await this.request('nlsecure', POST, this.cipher.update(tlv(0x0104, Buffer.from(this.token, 'hex'))))));
-    if (result.tag !== 0x01f1 || result.value[0] !== 0) throw new Error('NL55 token rejected');
+    if (result.tag !== 0x01f1 || result.value[0] !== 0) throw new Error('LTPDU token rejected');
   }
 
   async pair(pin: string): Promise<string> {
@@ -126,7 +126,7 @@ export class NL55Client {
     const digest = (label: string): Buffer => createHash('sha1').update(label).update(shared).digest().subarray(0, 16);
     this.cipher = createCipheriv('aes-128-ctr', digest('AES-NL-OPENAPI-KEY'), digest('AES-NL-OPENAPI-IV'));
     const result = readTlv(this.cipher.update(await this.request('nlsecure', POST, this.cipher.update(tlv(0x0103, Buffer.from(pin, 'ascii'))))));
-    if (result.tag !== 0x0104 || result.value.length !== 8) throw new Error('NL55 PIN rejected');
+    if (result.tag !== 0x0104 || result.value.length !== 8) throw new Error('LTPDU PIN rejected');
     return result.value.toString('hex');
   }
 
@@ -135,7 +135,7 @@ export class NL55Client {
       try {
         if (!this.cipher) await this.connect();
         const cipher = this.cipher;
-        if (!cipher) throw new Error('NL55 cipher is not initialized');
+        if (!cipher) throw new Error('LTPDU cipher is not initialized');
         return cipher.update(await this.request(path, code, cipher.update(plaintext)));
       } catch (error) {
         this.close();
@@ -149,13 +149,13 @@ export class NL55Client {
     return operation;
   }
 
-  async state(): Promise<NL55State> {
+  async state(): Promise<LtpduState> {
     const endpoints = ['lb/0/oo', 'lb/0/pb', 'lb/0/hu', 'lb/0/sa', 'lb/0/ct'];
     const payload = Buffer.concat(endpoints.flatMap((endpoint) => [tlv(TLV_ENDPOINT, Buffer.from(endpoint)), tlv(TLV_ARGUMENT, Buffer.alloc(0))]));
     return parseState(await this.secure('nlltpdu', GET, payload));
   }
 
-  async deviceInfo(): Promise<NL55DeviceInfo> {
+  async deviceInfo(): Promise<LtpduDeviceInfo> {
     const payload = Buffer.concat([tlv(TLV_ENDPOINT, Buffer.from('di')), tlv(TLV_ARGUMENT, Buffer.alloc(0))]);
     const data = await this.secure('nlltpdu', GET, payload);
     let offset = 0;
@@ -172,7 +172,7 @@ export class NL55Client {
       }
       offset = result.next;
     }
-    throw new Error('NL55 device-info response did not contain a serial number');
+    throw new Error('LTPDU device-info response did not contain a serial number');
   }
 
   async set(endpoint: string, value: number, bytes = 2): Promise<void> {

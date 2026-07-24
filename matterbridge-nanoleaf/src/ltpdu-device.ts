@@ -1,18 +1,18 @@
 /**
- * @file src/nl55-device.ts
- * @description Nanoleaf NL55 implementation of the common light device contract.
+ * @file src/ltpdu-device.ts
+ * @description Nanoleaf LTPDU implementation of the common light device contract.
  * @license Apache-2.0
  */
 
 import type { NanoleafLightDevice, NanoleafLightState } from './device.js';
-import type { NL55Client, NL55DeviceInfo, NL55State } from './nl55.js';
+import type { LtpduClient, LtpduDeviceInfo, LtpduState } from './ltpdu.js';
 
-/** Adapt the pre-Matter NL55 LTPDU client to the protocol-independent contract. */
-export class NL55Device implements NanoleafLightDevice {
+/** Adapt the pre-Matter Nanoleaf LTPDU client to the protocol-independent contract. */
+export class LtpduDevice implements NanoleafLightDevice {
   readonly host: string;
 
   constructor(
-    private readonly client: NL55Client,
+    private readonly client: LtpduClient,
     host: string,
   ) {
     this.host = host;
@@ -26,7 +26,7 @@ export class NL55Device implements NanoleafLightDevice {
     return this.client.state();
   }
 
-  async deviceInfo(): Promise<NL55DeviceInfo> {
+  async deviceInfo(): Promise<LtpduDeviceInfo> {
     return this.client.deviceInfo();
   }
 
@@ -56,4 +56,4 @@ export class NL55Device implements NanoleafLightDevice {
   }
 }
 
-export type { NL55State };
+export type { LtpduState };

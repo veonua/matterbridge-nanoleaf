@@ -37,7 +37,7 @@ function hostForUrl(host: string): string {
   return host.includes(':') && !host.startsWith('[') ? `[${host}]` : host;
 }
 
-/** Nanoleaf panel using the legacy HTTP OpenAPI discovered over mDNS. */
+/** Nanoleaf panel using the legacy HTTP OpenAPI. */
 export class WiFiPanelDevice implements NanoleafLightDevice {
   readonly host: string;
   private readonly baseUrl: string;

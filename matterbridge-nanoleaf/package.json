@@ -1,7 +1,7 @@
 {
   "name": "matterbridge-nanoleaf",
   "version": "0.1.0",
-  "description": "Matterbridge plugin for Nanoleaf NL55 LTPDU lightstrips and Wi-Fi OpenAPI panels",
+  "description": "Matterbridge plugin for Nanoleaf Essentials LTPDU devices and Wi-Fi OpenAPI panels",
   "author": "https://github.com/Luligu",
   "license": "Apache-2.0",
   "homepage": "https://github.com/Luligu/matterbridge-nanoleaf",
@@ -30,7 +30,6 @@
     "plugin",
     "nanoleaf",
     "nl22",
-    "nl55",
     "essentials",
     "lightstrip",
     "panels",

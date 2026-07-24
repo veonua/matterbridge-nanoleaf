@@ -2,13 +2,9 @@
   "title": "Nanoleaf devices",
   "type": "object",
   "properties": {
-    "protocol": { "type": "string", "title": "Nanoleaf protocol", "enum": ["auto", "nl55-ltpdu", "wifi-openapi"], "default": "auto" },
-    "host": { "type": "string", "title": "IPv6 address or mDNS hostname" },
-    "port": { "type": "integer", "default": 5683, "minimum": 1, "maximum": 65535 },
-    "discover": { "type": "boolean", "title": "Discover devices via mDNS", "default": true },
-    "deviceId": { "type": "string", "title": "mDNS device ID (optional)" },
+    "discover": { "type": "boolean", "title": "List supported Nanoleaf devices found with mDNS at startup", "default": true },
     "mdnsTimeout": { "type": "integer", "title": "mDNS discovery timeout (ms)", "default": 1500, "minimum": 250, "maximum": 10000 },
-    "mdnsInterface": { "type": "string", "title": "Network interface (optional)" },
+    "mdnsInterface": { "type": "string", "title": "Network interface for mDNS (optional)" },
     "devices": {
       "type": "array",
       "title": "Nanoleaf devices",
@@ -16,22 +12,22 @@
         "type": "object",
         "properties": {
           "host": { "type": "string" },
-          "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
-          "protocol": { "type": "string", "enum": ["nl55-ltpdu", "wifi-openapi"], "default": "wifi-openapi" },
-          "deviceId": { "type": "string" },
+          "protocol": { "type": "string", "enum": ["ltpdu", "wifi-openapi"], "default": "ltpdu" },
           "deviceName": { "type": "string" },
           "model": { "type": "string" },
-          "openApiToken": { "type": "string", "ui:widget": "password" },
-          "token": { "type": "string", "ui:widget": "password" },
-          "pin": { "type": "string", "ui:widget": "password" }
+          "token": { "type": "string", "title": "Access token", "ui:widget": "password" },
+          "pin": {
+            "type": "string",
+            "title": "8-digit Nanoleaf PIN (required for first LTPDU pairing)",
+            "minLength": 8,
+            "maxLength": 8,
+            "pattern": "^[0-9]{8}$",
+            "ui:widget": "password"
+          }
         },
         "required": ["host", "protocol"]
       }
     },
-    "pin": { "type": "string", "title": "8-digit Nanoleaf PIN", "minLength": 8, "maxLength": 8, "pattern": "^[0-9]{8}$", "ui:widget": "password" },
-    "token": { "type": "string", "title": "Generated LTPDU token", "readOnly": true, "ui:widget": "hidden", "minLength": 16, "maxLength": 16, "pattern": "^[0-9a-fA-F]{16}$" },
-    "openApiToken": { "type": "string", "title": "Generated OpenAPI token", "readOnly": true, "ui:widget": "hidden" },
-    "deviceName": { "type": "string", "default": "Nanoleaf NL55" },
     "pollInterval": { "type": "integer", "default": 30000, "minimum": 5000 }
   },
   "required": []
