@@ -2,9 +2,9 @@
   "name": "matterbridge-nanoleaf",
   "version": "0.2.0",
   "description": "Matterbridge plugin for Nanoleaf Essentials LTPDU devices and Wi-Fi OpenAPI panels",
-  "author": "Codex , Andrew Nyman",
+  "author": "Andrew Nyman",
   "license": "Apache-2.0",
-  "homepage": "https://github.com/Luligu/matterbridge-nanoleaf",
+  "homepage": "https://github.com/veonua/matterbridge-nanoleaf",
   "type": "module",
   "main": "dist/module.js",
   "types": "dist/module.d.ts",
@@ -16,10 +16,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Luligu/matterbridge-nanoleaf.git"
+    "url": "git+https://github.com/veonua/matterbridge-nanoleaf.git"
   },
   "bugs": {
-    "url": "https://github.com/Luligu/matterbridge-nanoleaf/issues"
+    "url": "https://github.com/veonua/matterbridge-nanoleaf/issues"
   },
   "funding": {
     "type": "buymeacoffee",
