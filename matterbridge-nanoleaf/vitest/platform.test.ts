@@ -123,7 +123,7 @@ describe('Nanoleaf platform', () => {
       ltpduLight,
     );
     await ltpduLight?.executeCommandHandler(
-      'stepColorTemperature',
+      'ColorControl.stepColorTemperature',
       {
         stepMode: ColorControl.StepMode.Up,
         stepSize: 20,

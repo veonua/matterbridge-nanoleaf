@@ -253,7 +253,7 @@ export class NanoleafPlatform extends MatterbridgeAccessoryPlatform {
       this.setColorTemperatureIfOn(device, Math.round(1_000_000 / colorTemperatureMireds)),
     );
     light.addCommandHandler(
-      'stepColorTemperature',
+      'ColorControl.stepColorTemperature',
       async ({
         request: { stepMode, stepSize, colorTemperatureMinimumMireds, colorTemperatureMaximumMireds },
         attributes: { colorTemperatureMireds, colorTempPhysicalMinMireds, colorTempPhysicalMaxMireds },
