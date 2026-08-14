@@ -148,7 +148,10 @@ describe('Nanoleaf platform', () => {
     expect(mocks.ltpduDevices[0]?.setColorTemperature).toHaveBeenCalledWith(2703);
     expect(mocks.ltpduDevices[0]?.setColorTemperature).toHaveBeenCalledWith(2564);
 
+    const infoSpy = vi.spyOn(log, 'info');
+    infoSpy.mockClear();
     await platform.onConfigure();
+    expect(infoSpy.mock.calls.flat().filter((value) => typeof value === 'string' && value.includes(' attribute '))).toHaveLength(0);
     expect(mocks.ltpduDevices[0]?.state).toHaveBeenCalledTimes(4);
     expect(mocks.wifiDevices[0]?.state).toHaveBeenCalledTimes(2);
     await platform.onShutdown();

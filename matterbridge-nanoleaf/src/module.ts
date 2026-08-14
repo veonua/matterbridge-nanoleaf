@@ -297,11 +297,11 @@ export class NanoleafPlatform extends MatterbridgeAccessoryPlatform {
   }
 
   private async applyState(light: MatterbridgeEndpoint, state: NanoleafLightState): Promise<void> {
-    await light.setAttribute('OnOff', 'onOff', state.on, this.log);
-    await light.setAttribute('LevelControl', 'currentLevel', scale(state.brightness, 100, 254), this.log);
-    await light.setAttribute('ColorControl', 'currentHue', scale(state.hue, 360, 254), this.log);
-    await light.setAttribute('ColorControl', 'currentSaturation', scale(state.saturation, 100, 254), this.log);
-    if (state.cct > 0) await light.setAttribute('ColorControl', 'colorTemperatureMireds', Math.round(1_000_000 / state.cct), this.log);
+    await light.updateAttribute('OnOff', 'onOff', state.on, this.log);
+    await light.updateAttribute('LevelControl', 'currentLevel', scale(state.brightness, 100, 254), this.log);
+    await light.updateAttribute('ColorControl', 'currentHue', scale(state.hue, 360, 254), this.log);
+    await light.updateAttribute('ColorControl', 'currentSaturation', scale(state.saturation, 100, 254), this.log);
+    if (state.cct > 0) await light.updateAttribute('ColorControl', 'colorTemperatureMireds', Math.round(1_000_000 / state.cct), this.log);
   }
 
   override async onShutdown(reason?: string): Promise<void> {
